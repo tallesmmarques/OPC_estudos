@@ -5,6 +5,10 @@
 #include "opcda.h"
 #include "opcerror.h"
 #include "Main.h"
+#include "SOCAdviseSink.h"
+#include "SOCDataCallback.h"
+#include "SOCWrapperFunctions.h"
+#include "OPCClient.h"
 
 using namespace std;
 
@@ -14,8 +18,67 @@ using namespace std;
 wchar_t SAW_ID[] = L"Saw-toothed Waves.Real4";
 wchar_t TRIANGLE_ID[] = L"Triangle Waves.Rea14";
 wchar_t RANDOM_ID[] = L"Random.Real4";
+wchar_t BUCKET_ID[] = L"Bucket Brigade.Real4";
+
+UINT OPC_DATA_TIME = RegisterClipboardFormat (_T("OPCSTMFORMATDATATIME"));
 
 int main(void)
+{
+	HRESULT hr;
+
+	printf("Inicializando ambiente COM...\n");
+	hr = OPCClient::StartupCOM();
+	_ASSERT(!FAILED(hr));
+
+	OPCClient* pOPCClient = new OPCClient;
+
+	printf("Instanciando servidor...\n");
+	pOPCClient->InstantiateServer();
+
+	printf("Adicionando grupo ao servidor...\n");
+	pOPCClient->AddGroup(L"Group1");
+
+	printf("Adicionando itens ao grupo...\n");
+	int RandomItemID = pOPCClient->AddItem(RANDOM_ID);
+	printf("ID do item %ls: %d\n", RANDOM_ID, RandomItemID);
+	int TriandleItemID = pOPCClient->AddItem(TRIANGLE_ID);
+	printf("ID do item %ls: %d\n", TRIANGLE_ID, TriandleItemID);
+	int BucketItemID = pOPCClient->AddItem(BUCKET_ID);
+	printf("ID do item %ls: %d\n", BUCKET_ID, BucketItemID);
+	printf("\n");
+
+
+	printf("Valor lido de Random: %f\n", pOPCClient->SyncReadItem(RandomItemID));
+	Sleep(1000);
+	printf("Valor lido de Random: %f\n", pOPCClient->SyncReadItem(RandomItemID));
+	Sleep(1000);
+	printf("Valor lido de Random: %f\n", pOPCClient->SyncReadItem(RandomItemID));
+	Sleep(2000);
+	printf("\n");
+
+
+	printf("Valor lido de Bucket: %f\n", pOPCClient->SyncReadItem(BucketItemID));
+	Sleep(1000);
+	pOPCClient->SyncWriteItem(BucketItemID, 100);
+	Sleep(1000);
+	printf("Valor lido de Bucket: %f\n", pOPCClient->SyncReadItem(BucketItemID));
+	Sleep(1000);
+	pOPCClient->SyncWriteItem(BucketItemID, 50);
+	Sleep(1000);
+	printf("Valor lido de Bucket: %f\n", pOPCClient->SyncReadItem(BucketItemID));
+	printf("\n");
+
+
+	printf("Finalizando instancias...\n");
+	delete pOPCClient;
+
+	printf("Finalizando ambiente COM...\n");
+	OPCClient::ReleaseCOM();
+
+	return EXIT_SUCCESS;
+}
+
+int main_bkp(void)
 {
 	IOPCServer* pIOPCServer = nullptr;
 	IOPCItemMgt* pIOPCItemMgt = nullptr;
@@ -185,6 +248,49 @@ int main(void)
 		Sleep(1000);
 	}
 	printf("\n");
+
+	/* ---------------------------------------------------------------------------------- */
+
+	IConnectionPoint* pIConnectionPoint = NULL; //pointer to IConnectionPoint Interface
+	DWORD dwCookie = 0;
+	SOCDataCallback* pSOCDataCallback = new SOCDataCallback();
+	pSOCDataCallback->AddRef();
+
+	printf("Setting up the IConnectionPoint callback connection...\n");
+	SetDataCallback(pIOPCItemMgt, pSOCDataCallback, pIConnectionPoint, &dwCookie);
+
+	// Change the group to the ACTIVE state so that we can receive the
+	// server´s callback notification
+	printf("Changing the group state to ACTIVE...\n");
+    SetGroupActive(pIOPCItemMgt); 
+
+	// Enter again a message pump in order to process the server´s callback
+	// notifications, for the same reason explained before.
+		
+	int bRet;
+	MSG msg;
+	DWORD ticks1, ticks2;
+
+	ticks1 = GetTickCount();
+	printf("Waiting for IOPCDataCallback notifications during 10 seconds...\n");
+	do {
+		bRet = GetMessage( &msg, NULL, 0, 0 );
+		if (!bRet){
+			printf ("Failed to get windows message! Error code = %d\n", GetLastError());
+			exit(0);
+		}
+		TranslateMessage(&msg); // This call is not really needed ...
+		DispatchMessage(&msg);  // ... but this one is!
+        ticks2 = GetTickCount();
+	}
+	while ((ticks2 - ticks1) < 10000);
+
+	// Cancel the callback and release its reference
+	printf("Cancelling the IOPCDataCallback notifications...\n");
+    CancelDataCallback(pIConnectionPoint, dwCookie);
+	//pIConnectionPoint->Release();
+	pSOCDataCallback->Release();
+
 
 	/* ---------------------------------------------------------------------------------- */
 	printf("Removing the OPC itens...\n");

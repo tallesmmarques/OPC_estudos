@@ -129,12 +129,20 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="OPCClient.cpp" />
     <ClCompile Include="opcda_i.c" />
+    <ClCompile Include="SOCAdviceSink.cpp" />
+    <ClCompile Include="SOCDataCallback.cpp" />
+    <ClCompile Include="SOCWrapperFunctions.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Main.h" />
+    <ClInclude Include="OPCClient.h" />
     <ClInclude Include="opcda.h" />
     <ClInclude Include="opcerror.h" />
+    <ClInclude Include="SOCAdviseSink.h" />
+    <ClInclude Include="SOCDataCallback.h" />
+    <ClInclude Include="SOCWrapperFunctions.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
