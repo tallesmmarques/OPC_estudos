@@ -47,26 +47,54 @@ int main(void)
 	printf("ID do item %ls: %d\n", BUCKET_ID, BucketItemID);
 	printf("\n");
 
+	
 
-	printf("Valor lido de Random: %f\n", pOPCClient->SyncReadItem(RandomItemID));
-	Sleep(1000);
-	printf("Valor lido de Random: %f\n", pOPCClient->SyncReadItem(RandomItemID));
-	Sleep(1000);
-	printf("Valor lido de Random: %f\n", pOPCClient->SyncReadItem(RandomItemID));
-	Sleep(2000);
-	printf("\n");
+	//printf("Valor lido de Random: %f\n", pOPCClient->SyncReadItem(RandomItemID));
+	//Sleep(1000);
+	//printf("Valor lido de Random: %f\n", pOPCClient->SyncReadItem(RandomItemID));
+	//Sleep(1000);
+	//printf("Valor lido de Random: %f\n", pOPCClient->SyncReadItem(RandomItemID));
+	//Sleep(2000);
+	//printf("\n");
 
 
-	printf("Valor lido de Bucket: %f\n", pOPCClient->SyncReadItem(BucketItemID));
-	Sleep(1000);
-	pOPCClient->SyncWriteItem(BucketItemID, 100);
-	Sleep(1000);
-	printf("Valor lido de Bucket: %f\n", pOPCClient->SyncReadItem(BucketItemID));
-	Sleep(1000);
-	pOPCClient->SyncWriteItem(BucketItemID, 50);
-	Sleep(1000);
-	printf("Valor lido de Bucket: %f\n", pOPCClient->SyncReadItem(BucketItemID));
-	printf("\n");
+	//printf("Valor lido de Bucket: %f\n", pOPCClient->SyncReadItem(BucketItemID));
+	//Sleep(1000);
+	//pOPCClient->SyncWriteItem(BucketItemID, 100);
+	//Sleep(1000);
+	//printf("Valor lido de Bucket: %f\n", pOPCClient->SyncReadItem(BucketItemID));
+	//Sleep(1000);
+	//pOPCClient->SyncWriteItem(BucketItemID, 50);
+	//Sleep(1000);
+	//printf("Valor lido de Bucket: %f\n", pOPCClient->SyncReadItem(BucketItemID));
+	//printf("\n");
+
+ 
+	pOPCClient->StartupASyncRead();
+
+	int bRet;
+	MSG msg;
+	DWORD ticks1, ticks2;
+	ticks1 = GetTickCount();
+	printf("Aguardando notificacoes...\n");
+	do {
+		bRet = GetMessage( &msg, NULL, 0, 0 );
+		if (!bRet){
+			printf ("Failed to get windows message! Error code = %d\n", GetLastError());
+			exit(0);
+		}
+		DispatchMessage(&msg);
+
+		printf("R:%f T:%f B:%f\n",
+			pOPCClient->GetASyncReadItem(RandomItemID),
+			pOPCClient->GetASyncReadItem(TriandleItemID),
+			pOPCClient->GetASyncReadItem(BucketItemID));
+
+        ticks2 = GetTickCount();
+	}
+	while ((ticks2 - ticks1) < 10000);
+
+	pOPCClient->CancelASyncRead();
 
 
 	printf("Finalizando instancias...\n");

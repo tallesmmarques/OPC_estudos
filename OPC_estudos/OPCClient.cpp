@@ -1,6 +1,7 @@
 #include <atlbase.h>
-#include "OPCClient.h"
 #include "opcerror.h"
+#include "OPCClient.h"
+#include "SOCWrapperFunctions.h"
 
 HRESULT OPCClient::StartupCOM() { return CoInitialize(NULL); }
 
@@ -78,6 +79,7 @@ int OPCClient::AddItem(wchar_t item_id[])
 	}
 
 	hServerItems.push_back(pAddResult[0].hServer);
+	ItemsValue.push_back(0);
 	return _numItems++;
 }
 
@@ -110,7 +112,7 @@ float OPCClient::SyncReadItem(int item_num_id)
 	return varValue.fltVal;
 }
 
-void OPCClient::SyncWriteItem(int item_num_id, float value)
+void OPCClient::SyncWriteItem(int item_num_id, double value)
 {
 	HRESULT hr;
 	CComVariant varValue = value;
@@ -132,12 +134,39 @@ void OPCClient::SyncWriteItem(int item_num_id, float value)
 	pIOPCSyncIO->Release();
 }
 
+void OPCClient::StartupASyncRead()
+{
+	pSOCDataCallback = new SOCDataCallback();
+	pSOCDataCallback->AddRef();
+	pSOCDataCallback->SavePointerToItems(&ItemsValue);
+
+	SetDataCallback(pIOPCItemMgt, pSOCDataCallback, pIConnectionPoint, &dwCookie);
+    SetGroupActive(pIOPCItemMgt); 
+}
+
+void OPCClient::SaveASyncReadItem(int item_num_id, double value)
+{
+	ItemsValue.at(item_num_id) = value;
+}
+
+double OPCClient::GetASyncReadItem(int item_num_id)
+{
+	return ItemsValue.at(item_num_id);
+}
+
+void OPCClient::CancelASyncRead()
+{
+    CancelDataCallback(pIConnectionPoint, dwCookie);
+	pIConnectionPoint->Release();
+	pSOCDataCallback->Release();
+}
+
 OPCClient::~OPCClient()
 {
 	HRESULT hr;
 	HRESULT* pErros = nullptr;
 
-	printf("Destrutor da classe OPCClient\n");
+	//printf("Destrutor da classe OPCClient\n");
 
 	// Remove the OPC items
 	for (OPCHANDLE hItem : hServerItems)
@@ -160,3 +189,6 @@ OPCClient::~OPCClient()
 	// Remove the OPC server object
 	pIOPCServer->Release();
 }
+
+
+
